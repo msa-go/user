@@ -13,5 +13,6 @@ redis:
   port: 6379
   password: password
 
-secret:
-  jwtsecret: "secret"
+# jwtsecret 은 저장소에 커밋하지 않는다.
+# USER_SECRET_JWTSECRET 환경변수로 주입한다. (미설정 시 기동 실패)
+secret: {}
