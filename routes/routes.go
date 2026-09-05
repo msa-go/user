@@ -21,6 +21,8 @@ func SetupRoutes(router *gin.Engine, userHandler handler.UserHandler, jwtSecret 
 	// Private API
 	authMiddleware := middleware.AuthMiddleware(jwtSecret)
 	private := router.Group("/api")
+	private.Use(middleware.RequestLogger(requestTimeout))
+	private.Use(otelgin.Middleware("user"))
 	private.Use(authMiddleware)
 	private.GET("/v1/user_info", userHandler.GetUserInfo)
 }
