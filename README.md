@@ -11,7 +11,7 @@ MSA 구조의 사용자 서비스입니다. 회원가입, 로그인(JWT 발급),
 | ORM / DB | [GORM](https://gorm.io) + PostgreSQL |
 | 캐시 | Redis (go-redis v9) |
 | 인증 | JWT (golang-jwt/jwt v5), bcrypt |
-| 설정 관리 | [Viper](https://github.com/spf13/viper) (YAML) |
+| 설정 관리 | [Viper](https://github.com/spf13/viper) (YAML) + [godotenv](https://github.com/joho/godotenv) (.env) |
 | 로깅 | [Logrus](https://github.com/sirupsen/logrus) |
 | 트레이싱 | OpenTelemetry (OTLP HTTP) |
 
@@ -125,13 +125,27 @@ DB/Redis 비밀번호와 JWT 서명 키는 저장소에 커밋하지 않고 `USE
 | `USER_REDIS_PASSWORD` | `redis.password` | `password` |
 | `USER_SECRET_JWTSECRET` | `secret.jwtsecret` | 32자 이상 임의 문자열 (운영 값과 다르게) |
 
+**로컬 개발 (`.env` 사용, 권장)**
+
+`LoadConfig()`가 기동 시 `.env` 파일을 자동으로 읽어 프로세스 환경변수로 등록합니다([joho/godotenv](https://github.com/joho/godotenv)). `.env`는 `.gitignore`에 등록되어 있어 커밋되지 않습니다.
+
 ```bash
-export USER_DATABASE_PASSWORD=password
-export USER_REDIS_PASSWORD=password
-export USER_SECRET_JWTSECRET="local-dev-only-32-characters-min"
+cp .env.example .env   # 최초 1회. 값은 필요 시 수정
+go run ./cmd/user
 ```
 
-`USER_SECRET_JWTSECRET`은 `min=32` 검증이 걸려 있어 32자 미만이면 기동이 거부됩니다.
+이미 셸에 같은 이름의 환경변수가 설정되어 있으면 `.env` 값보다 그 실제 환경변수가 우선합니다(`godotenv.Load`는 기존 변수를 덮어쓰지 않습니다). `.env` 파일 자체가 없어도 에러 없이 넘어가며, 이 경우 운영 환경처럼 실제 환경변수만으로 동작합니다.
+
+**운영/CI (`.env` 없이 실제 환경변수만)**
+
+```bash
+export USER_DATABASE_PASSWORD=...
+export USER_REDIS_PASSWORD=...
+export USER_SECRET_JWTSECRET=...
+go run ./cmd/user
+```
+
+두 방식 모두 `USER_SECRET_JWTSECRET`은 `min=32` 검증이 걸려 있어 32자 미만이면 기동이 거부됩니다.
 
 ### 5. 데이터베이스 스키마
 
@@ -139,7 +153,7 @@ export USER_SECRET_JWTSECRET="local-dev-only-32-characters-min"
 
 ## 실행 방법
 
-"4. 필수 환경변수"의 세 값을 export 한 뒤 실행합니다.
+"4. 필수 환경변수"에서 `.env`를 준비했거나 값을 export 했다면 바로 실행합니다.
 
 ```bash
 go run ./cmd/user
