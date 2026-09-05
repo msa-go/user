@@ -107,8 +107,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 		return
 	}
 
-	if len(param.Password) < 8 ||
-		len(param.ConfirmPassword) < 8 {
+	if len(param.Password) < 8 || len(param.ConfirmPassword) < 8 {
 		log.Logger.Info("Invalid Input")
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error_message": "비밀번호는 8자 이상이어야 합니다.",
