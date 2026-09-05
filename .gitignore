@@ -3,6 +3,10 @@
 bin/
 vendor/
 
+.env
+.env.*
+!.env.example
+
 *.out
 *.exe
 *.log

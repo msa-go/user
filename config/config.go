@@ -3,10 +3,12 @@ package config
 import (
 	// golang package
 	"log"
+	"os"
 	"strings"
 
 	// external package
 	"github.com/go-playground/validator/v10"
+	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 )
 
@@ -27,6 +29,15 @@ var secretKeys = []string{
 
 func LoadConfig() Config {
 	var cfg Config
+
+	// .env 는 로컬 개발 편의용이다. 이미 설정된 환경변수는 덮어쓰지 않으므로
+	// (godotenv.Load 기본 동작) 운영 환경의 실제 환경변수가 항상 우선한다.
+	// 파일이 없는 것은 정상(운영 환경)이므로 조용히 넘어가고, 파싱 에러만 fatal 로 처리한다.
+	if err := godotenv.Load(); err != nil {
+		if !os.IsNotExist(err) {
+			log.Fatalf("error load .env file: %v", err)
+		}
+	}
 
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
