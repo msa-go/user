@@ -67,18 +67,33 @@ HTTP 요청
 go mod download
 ```
 
-### 2. 인프라 기동 (PostgreSQL + Redis)
+### 2. `.env` 준비 (필수 — 컨테이너와 앱이 함께 사용)
+
+```bash
+cp .env.example .env
+```
+
+`docker-compose.yml`의 DB/Redis 비밀번호와 `config.LoadConfig()`가 읽는 앱 비밀값이 **같은 `.env` 파일**을 공유합니다. Docker Compose는 프로젝트 루트의 `.env`를 자동으로 읽어 `${VAR}` 자리를 치환하므로, 이 파일이 없으면 다음 단계의 `docker compose up`이 아예 실패합니다.
+
+```console
+$ docker compose config
+error while interpolating services.postgres.environment.POSTGRES_PASSWORD: required variable USER_DATABASE_PASSWORD is missing a value: ...
+```
+
+값은 자세히 "5. 필수 환경변수"에서 다룹니다. 지금은 기본값(`password`) 그대로 두고 다음 단계로 넘어가도 됩니다.
+
+### 3. 인프라 기동 (PostgreSQL + Redis)
 
 ```bash
 docker compose up -d
 ```
 
-`docker-compose.yml`은 아래 두 컨테이너를 띄웁니다. 호스트/포트는 `files/config/config.yaml` 기본값과 일치하고, 비밀번호는 "4. 필수 환경변수"에서 같은 값으로 주입합니다.
-
 | 서비스 | 이미지 | 포트 | 계정 |
 |--------|--------|------|------|
-| PostgreSQL | postgres:16-alpine | 5432 | `admin` / `password`, DB명 `user` |
-| Redis | redis:7-alpine | 6379 | 비밀번호 `password` |
+| PostgreSQL | postgres:16-alpine | 5432 | `admin` / `.env`의 `USER_DATABASE_PASSWORD`, DB명 `user` |
+| Redis | redis:7-alpine | 6379 | 비밀번호 `.env`의 `USER_REDIS_PASSWORD` |
+
+`admin`, DB명 `user`는 `files/config/config.yaml`의 `database.user` / `database.name`과 맞춰야 하는 비밀 아닌 값이라 `docker-compose.yml`에 그대로 남아 있습니다.
 
 컨테이너 상태 확인:
 
@@ -86,7 +101,7 @@ docker compose up -d
 docker compose ps
 ```
 
-### 3. 설정 확인
+### 4. 설정 확인
 
 호스트/포트 등 비밀이 아닌 값은 `files/config/config.yaml`에서 읽습니다.
 
@@ -110,31 +125,30 @@ observability:
   servicename: user
   otlpendpoint: localhost:4318
 
-# 비밀값은 이 파일에 두지 않는다. 아래 "4. 필수 환경변수"로 주입한다.
+# 비밀값은 이 파일에 두지 않는다. 앞서 준비한 .env / "5. 필수 환경변수"로 주입한다.
 ```
 
 `config.LoadConfig()`는 기동 시점에 `validate:"required"` 태그를 실제로 검사합니다. yaml/환경변수 어느 쪽이든 필수값이 비어 있으면 서버가 뜨지 않고 즉시 종료됩니다.
 
-### 4. 필수 환경변수 (비밀값)
+### 5. 필수 환경변수 (비밀값)
 
-DB/Redis 비밀번호와 JWT 서명 키는 저장소에 커밋하지 않고 `USER_` 접두사 환경변수로만 주입받습니다. `AutomaticEnv`는 `.`을 `_`로 치환해 매칭하므로 (`config.SecretConfig.JWTSecret` → `secret.jwtsecret` → `USER_SECRET_JWTSECRET`), 아래 값을 실행 전에 반드시 설정해야 합니다.
+DB/Redis 비밀번호와 JWT 서명 키는 저장소에 커밋하지 않고 `USER_` 접두사 환경변수로만 주입받습니다. `AutomaticEnv`는 `.`을 `_`로 치환해 매칭하므로 (`config.SecretConfig.JWTSecret` → `secret.jwtsecret` → `USER_SECRET_JWTSECRET`), 아래 값을 실행 전에 반드시 설정해야 합니다. 같은 값을 "2. `.env` 준비"에서 만든 `.env`가 `docker-compose.yml`의 컨테이너 비밀번호에도 그대로 사용합니다.
 
-| 환경변수 | 대응 설정 키 | 로컬 개발 값(위 docker-compose 기준) |
-|----------|--------------|--------------------------------------|
+| 환경변수 | 대응 설정 키 | 로컬 개발 값(`.env.example` 기준) |
+|----------|--------------|-------------------------------------|
 | `USER_DATABASE_PASSWORD` | `database.password` | `password` |
 | `USER_REDIS_PASSWORD` | `redis.password` | `password` |
 | `USER_SECRET_JWTSECRET` | `secret.jwtsecret` | 32자 이상 임의 문자열 (운영 값과 다르게) |
 
 **로컬 개발 (`.env` 사용, 권장)**
 
-`LoadConfig()`가 기동 시 `.env` 파일을 자동으로 읽어 프로세스 환경변수로 등록합니다([joho/godotenv](https://github.com/joho/godotenv)). `.env`는 `.gitignore`에 등록되어 있어 커밋되지 않습니다.
+`LoadConfig()`가 기동 시 `.env` 파일을 자동으로 읽어 프로세스 환경변수로 등록합니다([joho/godotenv](https://github.com/joho/godotenv)). `.env`는 `.gitignore`에 등록되어 있어 커밋되지 않습니다. "2. `.env` 준비"에서 이미 만들었다면 값만 필요 시 수정합니다.
 
 ```bash
-cp .env.example .env   # 최초 1회. 값은 필요 시 수정
 go run ./cmd/user
 ```
 
-이미 셸에 같은 이름의 환경변수가 설정되어 있으면 `.env` 값보다 그 실제 환경변수가 우선합니다(`godotenv.Load`는 기존 변수를 덮어쓰지 않습니다). `.env` 파일 자체가 없어도 에러 없이 넘어가며, 이 경우 운영 환경처럼 실제 환경변수만으로 동작합니다.
+이미 셸에 같은 이름의 환경변수가 설정되어 있으면 `.env` 값보다 그 실제 환경변수가 우선합니다(`godotenv.Load`는 기존 변수를 덮어쓰지 않습니다). `.env` 파일 자체가 없어도 에러 없이 넘어가며, 이 경우 운영 환경처럼 실제 환경변수만으로 동작합니다(단, `docker-compose.yml`은 `.env` 없이는 뜨지 않습니다).
 
 **운영/CI (`.env` 없이 실제 환경변수만)**
 
@@ -147,13 +161,13 @@ go run ./cmd/user
 
 두 방식 모두 `USER_SECRET_JWTSECRET`은 `min=32` 검증이 걸려 있어 32자 미만이면 기동이 거부됩니다.
 
-### 5. 데이터베이스 스키마
+### 6. 데이터베이스 스키마
 
 자동 마이그레이션은 실행되지 않습니다. `users` 테이블은 서버 기동 전에 직접 생성해야 합니다.
 
 ## 실행 방법
 
-"4. 필수 환경변수"에서 `.env`를 준비했거나 값을 export 했다면 바로 실행합니다.
+"2. `.env` 준비"에서 `.env`를 만들었거나 "5. 필수 환경변수"의 값을 export 했다면 바로 실행합니다.
 
 ```bash
 go run ./cmd/user
