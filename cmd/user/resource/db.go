@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"user/config"
+	"user/models"
 
 	// external packages
 	"gorm.io/driver/postgres"
@@ -28,6 +29,10 @@ func InitDB(cfg *config.Config) *gorm.DB {
 
 	if err != nil {
 		log.Fatalf("failed to connect to DB: %v", err)
+	}
+
+	if err := db.AutoMigrate(&models.User{}); err != nil {
+		log.Fatalf("failed to migrate database: %v", err)
 	}
 
 	log.Println("connected to DB")
