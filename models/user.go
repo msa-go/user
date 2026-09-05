@@ -10,8 +10,8 @@ type RegisterParameter struct {
 type User struct {
 	ID       int64  `json:"id"`
 	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"-"`
+	Email    string `json:"email" gorm:"uniqueIndex;not null"`
+	Password string `json:"-" gorm:"not null"`
 	Role     string `json:"role" gorm:"default:user"`
 }
 
