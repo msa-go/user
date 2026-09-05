@@ -11,11 +11,12 @@ import (
 
 func SetupRoutes(router *gin.Engine, userHandler handler.UserHandler, jwtSecret string, requestTimeout time.Duration) {
 	//Public API
-	router.Use(middleware.RequestLogger(requestTimeout))
-	router.Use(otelgin.Middleware("user"))
-	router.GET("/ping", userHandler.Ping)
-	router.POST("/v1/register", userHandler.Register)
-	router.POST("/v1/login", userHandler.Login)
+	public := router.Group("/api")
+	public.Use(middleware.RequestLogger(requestTimeout))
+	public.Use(otelgin.Middleware("user"))
+	public.GET("/ping", userHandler.Ping)
+	public.POST("/v1/register", userHandler.Register)
+	public.POST("/v1/login", userHandler.Login)
 
 	// Private API
 	authMiddleware := middleware.AuthMiddleware(jwtSecret)
