@@ -16,6 +16,9 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
+// ErrInvalidCredentials 는 로그인 시 비밀번호가 일치하지 않을 때 반환된다.
+var ErrInvalidCredentials = errors.New("invalid credentials")
+
 // UserUsecase orchestrates user-related business scenarios (login, registration)
 // on top of UserService. Both the REST handler and the gRPC handler depend on
 // this interface so they can share the same business logic.
@@ -29,12 +32,14 @@ type UserUsecase interface {
 type userUsecase struct {
 	UserService service.UserService
 	JWTSecret   string
+	TokenExpiry time.Duration
 }
 
-func NewUserUsecase(userService service.UserService, jwtSecret string) UserUsecase {
+func NewUserUsecase(userService service.UserService, jwtSecret string, tokenExpiry time.Duration) UserUsecase {
 	return &userUsecase{
 		UserService: userService,
 		JWTSecret:   jwtSecret,
+		TokenExpiry: tokenExpiry,
 	}
 }
 
@@ -103,15 +108,16 @@ func (uc *userUsecase) Login(ctx context.Context, param models.LoginParameter, u
 		log.Logger.WithFields(logrus.Fields{
 			"email": param.Email,
 		}).Errorf("utils.CheckPasswordHash got error: %v", err)
+		return "", err
 	}
 
 	if !isMatch {
-		return "", errors.New("Email atau password salah")
+		return "", ErrInvalidCredentials
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": userID,
-		"exp":     time.Now().Add(time.Hour * 24).Unix(),
+		"exp":     time.Now().Add(uc.TokenExpiry).Unix(),
 	})
 
 	tokenString, err := token.SignedString([]byte(uc.JWTSecret))

@@ -1,18 +1,24 @@
 app:
   port: 8080
+  tokenexpiry: 24h
+  requesttimeout: 2s
 
 database:
   host: localhost
   user: admin
-  password: password
   name: user
   port: 5432
 
 redis:
   host: 127.0.0.1
   port: 6379
-  password: password
 
-# jwtsecret 은 저장소에 커밋하지 않는다.
-# USER_SECRET_JWTSECRET 환경변수로 주입한다. (미설정 시 기동 실패)
-secret: {}
+observability:
+  servicename: user
+  otlpendpoint: localhost:4318
+
+# 비밀값은 저장소에 커밋하지 않는다. 아래 환경변수로 주입한다.
+#   USER_DATABASE_PASSWORD
+#   USER_REDIS_PASSWORD
+#   USER_SECRET_JWTSECRET   (32자 이상)
+# 하나라도 없으면 기동 시점에 실패한다.

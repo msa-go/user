@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"time"
 	"user/cmd/user/handler"
 	"user/middleware"
 
@@ -8,9 +9,9 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
 
-func SetupRoutes(router *gin.Engine, userHandler handler.UserHandler, jwtSecret string) {
+func SetupRoutes(router *gin.Engine, userHandler handler.UserHandler, jwtSecret string, requestTimeout time.Duration) {
 	//Public API
-	router.Use(middleware.RequestLogger())
+	router.Use(middleware.RequestLogger(requestTimeout))
 	router.Use(otelgin.Middleware("user"))
 	router.GET("/ping", userHandler.Ping)
 	router.POST("/v1/register", userHandler.Register)

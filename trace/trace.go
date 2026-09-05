@@ -3,7 +3,8 @@ package trace
 import (
 	// golang package
 	"context"
-	"log"
+	"fmt"
+	"user/infrastructure/log"
 
 	// external package
 	"go.opentelemetry.io/otel"
@@ -13,18 +14,19 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
-func InitTracer(serviceName string) (func(), error) {
+// InitTracer 는 OTLP HTTP exporter 로 트레이스를 내보내는 TracerProvider 를
+// 설정하고, 종료 시 호출할 shutdown 함수를 반환한다.
+func InitTracer(serviceName, endpoint string) (func(), error) {
 	exp, err := otlptracehttp.New(
 		context.Background(),
-		otlptracehttp.WithEndpoint("localhost:4318"),
+		otlptracehttp.WithEndpoint(endpoint),
 		otlptracehttp.WithInsecure(),
 	)
-
 	if err != nil {
-		log.Fatalf("Error Init Tracer %v", err)
+		return nil, fmt.Errorf("init otlp exporter: %w", err)
 	}
 
-	trace := trace.NewTracerProvider(
+	provider := trace.NewTracerProvider(
 		trace.WithBatcher(exp),
 		trace.WithResource(resource.NewWithAttributes(
 			semconv.SchemaURL,
@@ -32,10 +34,11 @@ func InitTracer(serviceName string) (func(), error) {
 		)),
 	)
 
-	otel.SetTracerProvider(trace)
+	otel.SetTracerProvider(provider)
+
 	return func() {
-		if err := trace.Shutdown(context.Background()); err != nil {
-			log.Fatalf("Error shutting down tracer: %v", err)
+		if err := provider.Shutdown(context.Background()); err != nil {
+			log.Logger.Errorf("error shutting down tracer: %v", err)
 		}
 	}, nil
 }
