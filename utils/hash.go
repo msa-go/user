@@ -15,13 +15,16 @@ func HashPassword(password string) (string, error) {
 	return string(hashed), nil
 }
 
-// CheckPasswordHash check password hash by given password.
+// CheckPasswordHash 는 저장된 bcrypt 해시와 평문 비밀번호가 일치하는지 확인한다.
 //
-// It returns bool, and nil error when successful.
-// Otherwise, empty bool, and error will be returned.
-func CheckPasswordHash(password, hash string) (bool, error) {
-	err := bcrypt.CompareHashAndPassword([]byte(password), []byte(hash))
+// bcrypt.CompareHashAndPassword 는 첫 인자가 해시, 둘째가 평문이다.
+// 비밀번호 불일치는 정상적인 경우이므로 error 없이 false 로 구분해 반환한다.
+func CheckPasswordHash(hash, password string) (bool, error) {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	if err != nil {
+		if err == bcrypt.ErrMismatchedHashAndPassword {
+			return false, nil
+		}
 		return false, err
 	}
 
