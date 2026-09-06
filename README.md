@@ -138,7 +138,7 @@ DB/Redis 비밀번호와 JWT 서명 키는 저장소에 커밋하지 않고 `USE
 |----------|--------------|-------------------------------------|
 | `USER_DATABASE_PASSWORD` | `database.password` | `password` |
 | `USER_REDIS_PASSWORD` | `redis.password` | `password` |
-| `USER_SECRET_JWTSECRET` | `secret.jwtsecret` | 32자 이상 임의 문자열 (운영 값과 다르게) |
+| `USER_SECRET_JWTSECRET` | `secret.jwtsecret` | `local-dev-only-32-characters-min` (32자 이상, 운영 값과 다르게) |
 
 **로컬 개발 (`.env` 사용, 권장)**
 
